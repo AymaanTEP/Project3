@@ -1,5 +1,5 @@
 # Gia Buu Luong, Aymaan Mohammed
-# ECE 241 - Project 3: App2
+# ECE 241 - Project 3: App2 and App3
 
 from Movie import Movie
 
@@ -60,3 +60,25 @@ class MovieBST:
                 current = current.right
 
         return None
+
+    def displayInOrder(self):
+        print("Display in order " + str(self.__size) + " items by ID")
+        self.__displayInOrder(self.__root)
+
+    def __displayInOrder(self, node):
+        if node is not None:
+            self.__displayInOrder(node.left)
+            print(node.movie)
+            self.__displayInOrder(node.right)
+
+    def show(self):
+        print("The BSTree looks like:")
+        self.__show(self.__root, 0)
+
+    def __show(self, node, level):
+        if node is not None:
+            # Right subtree appears above the root in the sideways tree.
+            self.__show(node.right, level + 1)
+            print("      " * level + str(node.movie.getID())
+                  + "(" + str(node.index) + ")")
+            self.__show(node.left, level + 1)
