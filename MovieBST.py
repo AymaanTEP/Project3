@@ -1,9 +1,12 @@
 # Gia Buu Luong, Aymaan Mohammed
-# ECE 241 - Project 3: App2, App3 and App4
+# ECE 241 - Project 3: App2, App3, App4 and App5
 
 from Movie import Movie
 from MovieList import MovieList
+from Queue import Queue
 import random
+import math
+import tkinter as tk
 
 
 class Node:
@@ -18,6 +21,7 @@ class MovieBST:
     def __init__(self, filename):
         self.__root = None
         self.__size = 0
+        self.__maxIndex = -1  # largest level-order index, kept up to date in insert
 
         with open(filename, "r") as file:
             for line in file:
@@ -29,6 +33,7 @@ class MovieBST:
         if self.__root is None:
             self.__root = Node(movie, 0)
             self.__size += 1
+            self.__maxIndex = max(self.__maxIndex, 0)
         else:
             self.__insert(self.__root, movie)
 
@@ -38,17 +43,29 @@ class MovieBST:
             if node.left is None:
                 node.left = Node(movie, 2 * node.index + 1)
                 self.__size += 1
+                self.__maxIndex = max(self.__maxIndex, node.left.index)
             else:
                 self.__insert(node.left, movie)
         elif movie.getID() > node.movie.getID():
             if node.right is None:
                 node.right = Node(movie, 2 * node.index + 2)
                 self.__size += 1
+                self.__maxIndex = max(self.__maxIndex, node.right.index)
             else:
                 self.__insert(node.right, movie)
 
     def getSize(self):
         return self.__size
+
+    def getMaxIndex(self):
+        return self.__maxIndex
+
+    def getMaxLevel(self):
+        # Level d holds indexes 2^d-1 .. 2^(d+1)-2, so the deepest level is
+        # floor(log2(maxIndex+1)). The root is at level 0.
+        if self.__maxIndex < 0:
+            return -1
+        return int(math.log2(self.__maxIndex + 1))
 
     def search(self, movie_id):
         current = self.__root
@@ -99,3 +116,65 @@ class MovieBST:
             if word in node.movie.getTitle().lower().split():
                 userList.append(node.movie)
             self.__extractListInOrder(node.right, word, userList)
+
+    def displayLevelOrder(self):
+        # Breadth-first traversal with a queue (not recursive). Each visited
+        # node is printed and stored in the list at its level-order index.
+        levelList = [None] * (self.__maxIndex + 1)
+        if self.__root is None:
+            return levelList
+
+        queue = Queue(self.__size)
+        queue.enqueue(self.__root)
+        while not queue.isEmpty():
+            node = queue.dequeue()
+            print(node.movie)
+            levelList[node.index] = node.movie
+            if node.left is not None:
+                queue.enqueue(node.left)
+            if node.right is not None:
+                queue.enqueue(node.right)
+        return levelList
+
+    @staticmethod
+    def plotBST(listDB):
+        # Draw the whole complete binary tree in gray, then highlight the
+        # nodes present in the level-order list (and their links) in blue.
+        n = len(listDB)
+        if n == 0:
+            return
+        levels = int(math.log2(n)) + 1
+        cbtSize = 2 ** levels - 1
+
+        width, height, margin = 1400, 80 * levels + 40, 20
+        x, y = [], []
+        for i in range(cbtSize):
+            level = int(math.log2(i + 1))
+            pos = i - (2 ** level - 1)  # position within its level
+            x.append(margin + (pos + 0.5) * (width - 2 * margin) / 2 ** level)
+            y.append(margin + 10 + level * 80)
+
+        def occupied(i):
+            return i < n and listDB[i] is not None
+
+        window = tk.Tk()
+        window.title("BST plot")
+        canvas = tk.Canvas(window, width=width, height=height, bg="white")
+        canvas.pack()
+
+        r = 4
+        # Lines first so the nodes are drawn on top of them; gray before
+        # blue so the highlighted links are never covered
+        for highlight in (False, True):
+            for i in range(1, cbtSize):
+                parent = (i - 1) // 2
+                if (occupied(i) and occupied(parent)) == highlight:
+                    color = "blue" if highlight else "gray"
+                    canvas.create_line(x[parent], y[parent], x[i], y[i],
+                                       fill=color)
+        for i in range(cbtSize):
+            color = "blue" if occupied(i) else "gray"
+            canvas.create_oval(x[i] - r, y[i] - r, x[i] + r, y[i] + r,
+                               fill=color, outline=color)
+
+        window.mainloop()
